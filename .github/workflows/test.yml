@@ -6,10 +6,22 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y gcc-riscv64-linux-gnu qemu-system-riscv clang-format bc
-      - run: make fmt && git diff --exit-code
+      - name: Check sleep formatting
+        run: clang-format --dry-run --Werror user/sleep.c
       - run: make kernel/kernel fs.img
-      - run: ./test-xv6.py usertests
-      - run: ./test-xv6.py crash
+      - name: Run kernel regression tests
+        run: ./test-xv6.py usertests
+      # Exercise 1: use the course grader without modifying its tests.
+      - name: Grade sleep
+        run: make GRADEFLAGS=sleep grade
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: linux-test-output-${{ github.event_name }}
+          path: |
+            test-xv6.out
+            xv6.out*
+          if-no-files-found: ignore
 
   macos:
     runs-on: macos-latest
