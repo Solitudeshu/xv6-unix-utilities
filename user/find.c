@@ -33,7 +33,6 @@ find(char *path, char *target)
     return;
   }
 
-
   if (strcmp(basename(path), target) == 0)
     printf("%s\n", path);
 
