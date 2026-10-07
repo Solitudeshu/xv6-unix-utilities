@@ -19,6 +19,8 @@ jobs:
         run: make GRADEFLAGS=sixfive grade
       - name: Grade find
         run: make GRADEFLAGS=find grade
+      - name: Grade exec
+        run: make GRADEFLAGS=exec grade
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
