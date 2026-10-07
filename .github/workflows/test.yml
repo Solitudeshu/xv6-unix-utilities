@@ -15,8 +15,8 @@ jobs:
         run: make GRADEFLAGS=sleep grade
       - name: Grade memdump
         run: make GRADEFLAGS=memdump grade
-      # - name: Grade sixfive
-      #   run: make GRADEFLAGS=sixfive grade
+      - name: Grade sixfive
+        run: make GRADEFLAGS=sixfive grade
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

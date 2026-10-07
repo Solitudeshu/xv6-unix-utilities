@@ -101,3 +101,59 @@ parser_destroy(struct sixfive_parser *p)
     free(p->digits);
   parser_init(p);
 }
+
+int
+process_fd(int fd, struct sixfive_parser *p)
+{
+  char buf[512];
+  int n;
+
+  while ((n = read(fd, buf, sizeof(buf))) > 0) {
+    if (parser_feed(p, buf, n) < 0)
+      return -1;
+  }
+
+  if (n < 0)
+    return -1;
+
+  parser_finish(p);
+  return 0;
+}
+
+int
+main(int argc, char *argv[])
+{
+  struct sixfive_parser parser;
+  int status = 0;
+
+  parser_init(&parser);
+
+  if (argc == 1) {
+    if (process_fd(0, &parser) < 0) {
+      fprintf(2, "sixfive: read error\n");
+      status = 1;
+    }
+  } else {
+    for (int i = 1; i < argc; i++) {
+      int fd = open(argv[i], O_RDONLY);
+
+      if (fd < 0) {
+        fprintf(2, "sixfive: cannot open %s\n", argv[i]);
+        status = 1;
+        continue;
+      }
+
+      if (process_fd(fd, &parser) < 0) {
+        fprintf(2, "sixfive: read error %s\n", argv[i]);
+        status = 1;
+        close(fd);
+        break;
+      }
+
+      close(fd);
+    }
+  }
+
+  parser_destroy(&parser);
+  exit(status);
+}
