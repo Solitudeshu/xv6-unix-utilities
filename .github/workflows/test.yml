@@ -6,14 +6,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y gcc-riscv64-linux-gnu qemu-system-riscv clang-format bc
-      - name: Check sleep formatting
-        run: clang-format --dry-run --Werror user/sleep.c
+      - name: Check utility formatting
+        run: clang-format --dry-run --Werror user/sleep.c user/memdump.c user/sixfive.c user/find.c
       - run: make kernel/kernel fs.img
       - name: Run kernel regression tests
         run: ./test-xv6.py usertests
-      # Exercise 1: use the course grader without modifying its tests.
       - name: Grade sleep
         run: make GRADEFLAGS=sleep grade
+      - name: Grade memdump
+        run: make GRADEFLAGS=memdump grade
+      - name: Grade sixfive
+        run: make GRADEFLAGS=sixfive grade
+      - name: Grade find
+        run: make GRADEFLAGS=find grade
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
