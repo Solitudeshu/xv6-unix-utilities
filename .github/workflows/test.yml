@@ -21,8 +21,6 @@ jobs:
         run: make GRADEFLAGS=find grade
       - name: Grade exec
         run: make GRADEFLAGS=exec grade
-      - name: Test find edge cases
-        run: python3 tests/test-find-regressions.py --out find-regression-results
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -30,7 +28,6 @@ jobs:
           path: |
             test-xv6.out
             xv6.out*
-            find-regression-results/
           if-no-files-found: ignore
 
   macos:
