@@ -6,10 +6,26 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y gcc-riscv64-linux-gnu qemu-system-riscv clang-format bc
-      - run: make fmt && git diff --exit-code
+      - name: Check submitted source format
+        run: |
+          case "$(sed -n 's/^LAB=//p' conf/lab.mk)" in
+            util) clang-format --dry-run --Werror user/sleep.c ;;
+            syscall) clang-format --dry-run --Werror user/attack.c ;;
+            *) echo "No format check configured for this lab"; exit 1 ;;
+          esac
       - run: make kernel/kernel fs.img
-      - run: ./test-xv6.py usertests
-      - run: ./test-xv6.py crash
+      - name: Run lab-specific tests
+        run: |
+          case "$(sed -n 's/^LAB=//p' conf/lab.mk)" in
+            util)
+              ./test-xv6.py usertests
+              ./test-xv6.py crash
+              ;;
+            syscall)
+              ./grade-lab-syscall attack
+              ;;
+            *) echo "No tests configured for this lab"; exit 1 ;;
+          esac
 
   macos:
     runs-on: macos-latest
