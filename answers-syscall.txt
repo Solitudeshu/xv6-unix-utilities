@@ -1,4 +1,4 @@
-LAB 2 - LỜI GỌI HỆ THỐNG
+LAB 2 - SYSTEM CALLS
 Phần 1. Sử dụng GDB
 
 Q1. Hàm nào gọi syscall()?
