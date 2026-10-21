@@ -1,1 +1,64 @@
 LAB 2 - SYSTEM CALLS
+Phần 1. Sử dụng GDB
+
+Q1. Hàm nào gọi syscall()?
+
+usertrap() gọi trực tiếp syscall(). Kết quả backtrace có frame #0 là
+syscall() và frame #1 là usertrap() tại kernel/trap.c:68.
+
+Q2. p->trapframe->a7 có giá trị gì và mang ý nghĩa gì?
+
+Giá trị đọc được là 0xf, tương đương 15 ở hệ thập phân. Đối chiếu
+kernel/syscall.h, số 15 tương ứng với SYS_open.
+
+a7 lưu số hiệu system call mà chương trình yêu cầu. Khi chuyển vào
+kernel, giá trị này được lưu trong trapframe để syscall() chọn hàm
+xử lý. Ở lần dừng đang xét, tiến trình init gọi open("console", O_RDWR)
+trong user/init.c.
+
+Source đang dùng không có user/initcode.S như gợi ý trong đề. Việc nạp
+/init được thực hiện bằng kexec() trong forkret(), ở kernel/proc.c.
+
+Q3. Trước khi trap, CPU ở chế độ nào?
+
+Trước khi trap, CPU ở chế độ User. GDB cho kết quả sstatus = 0x200000022;
+bit SPP ở vị trí 8 bằng 0, kiểm tra bằng (($sstatus >> 8) & 1).
+
+SPP ghi lại chế độ trước khi trap. Còn tại điểm đang dừng trong kernel,
+CPU đã ở chế độ Supervisor.
+
+Q4. Lệnh nào gây panic? Thanh ghi nào tương ứng với biến num?
+
+Sau khi tạm thay dòng gán num bằng num = *(int *)0, địa chỉ sepc báo lỗi
+là 0x80001d62. Tra kernel/kernel.asm và kiểm tra bằng GDB thu được:
+
+  0x80001d62 <syscall+16>: lw a3,0(zero)
+
+Lệnh này đọc một giá trị 32 bit tại địa chỉ 0 để đưa vào a3. Vì vậy,
+thanh ghi đích tương ứng với num ở câu lệnh này là a3. Tuy nhiên, việc
+đọc bị lỗi nên phép gán chưa hoàn thành.
+
+Địa chỉ và thanh ghi trên là kết quả của bản build dùng cho thí nghiệm.
+
+Q5. Vì sao kernel bị lỗi?
+
+Biểu thức *(int *)0 yêu cầu đọc dữ liệu tại địa chỉ 0, không phải gán
+số 0 cho num. Địa chỉ này không có ánh xạ hợp lệ trong bảng trang của
+kernel nên gây lỗi truy cập bộ nhớ.
+
+Các giá trị quan sát được:
+  scause = 0xd: mã 13, lỗi đọc trang nhớ (load page fault).
+  sepc   = 0x80001d62: địa chỉ lệnh gây lỗi.
+  stval  = 0x0: địa chỉ bộ nhớ được truy cập khi xảy ra lỗi.
+
+Đây là lỗi xảy ra trong kernel, không được xử lý như ngắt thiết bị,
+nên kerneltrap() báo panic.
+
+Q6. Tiến trình nào đang chạy khi kernel bị lỗi? PID là bao nhiêu?
+
+Tại điểm dừng ở lệnh gây lỗi, p->name có giá trị "init" và p->pid bằng 1.
+Vì vậy, tiến trình đang chạy là init, PID 1.
+
+Sau thí nghiệm đã khôi phục dòng num = p->trapframe->a7;, build lại và
+kiểm tra xv6 khởi động vào shell, chạy được lệnh echo. Ảnh và log được
+lưu riêng để dùng trong báo cáo.
