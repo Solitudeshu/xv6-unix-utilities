@@ -22,7 +22,7 @@ jobs:
               ./test-xv6.py crash
               ;;
             syscall)
-              ./grade-lab-syscall attack
+              make grade
               ;;
             *) echo "No tests configured for this lab"; exit 1 ;;
           esac
