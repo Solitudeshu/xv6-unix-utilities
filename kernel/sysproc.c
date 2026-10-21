@@ -1,6 +1,7 @@
 #include "types.h"
 #include "riscv.h"
 #include "defs.h"
+#include "syscall.h"
 #include "param.h"
 #include "memlayout.h"
 #include "spinlock.h"
@@ -115,10 +116,21 @@ uint64
 sys_interpose(void)
 {
   int mask;
+  char path[MAXPATH];
   struct proc *p = myproc();
+  uint pathname_calls = (1U << SYS_open) | (1U << SYS_exec);
 
   argint(0, &mask);
+  if (argstr(1, path, sizeof(path)) < 0)
+    return -1;
 
+  // A later call may add restrictions, but must not broaden an old one.
+  if (((uint)mask & pathname_calls) != 0) {
+    if ((p->syscall_mask & pathname_calls) == 0)
+      safestrcpy(p->allowed_path, path, sizeof(p->allowed_path));
+    else if (strncmp(p->allowed_path, path, MAXPATH) != 0)
+      p->allowed_path[0] = 0;
+  }
   p->syscall_mask |= (uint)mask;
 
   return 0;
