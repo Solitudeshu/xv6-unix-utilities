@@ -2,15 +2,14 @@
 #include "kernel/riscv.h"
 #include "user/user.h"
 
-#define NPAGES 64
-#define MSG "Here it is: "
+#define NPAGES  64
+#define MSG     "Here it is: "
 #define MSG_LEN (sizeof(MSG) - 1)
 
 static int
 alnum(char c)
 {
-  return (c >= '0' && c <= '9') ||
-         (c >= 'A' && c <= 'Z') ||
+  return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') ||
          (c >= 'a' && c <= 'z');
 }
 
@@ -48,8 +47,7 @@ main(int argc, char *argv[])
       while ((uint64)(secret + n) < page + PGSIZE && alnum(secret[n]))
         n++;
 
-      if (n > 0 && (uint64)(secret + n) < page + PGSIZE &&
-          secret[n] == '\0') {
+      if (n > 0 && (uint64)(secret + n) < page + PGSIZE && secret[n] == '\0') {
         write(1, secret, n);
         write(1, "\n", 1);
         exit(0);
