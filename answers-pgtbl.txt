@@ -1,0 +1,27 @@
+Câu 1. Phân tích bảng trang của tiến trình pgtbltest
+
+Kết quả dưới đây được ghi từ print_pgtbl trên nhánh pgtbl, trước khi thêm ánh xạ USYSCALL. Mỗi dòng biểu diễn một trang 4 KiB; PA được tính từ PTE và có thể thay đổi giữa các lần chạy. Trong cột cờ, V là hợp lệ, R là đọc, W là ghi, X là thực thi, U là quyền truy cập từ user mode; A và D lần lượt ghi nhận trang đã được truy cập và đã được ghi. A, D là bit trạng thái, không phải quyền truy cập. Cờ không xuất hiện nghĩa là quyền hoặc trạng thái tương ứng không được đặt.
+
+VA             PTE         PA          perm và các bit đặt     Nội dung logic
+0x0000000000   0x21FC885B  0x87F22000  0x5B V,R,X,U,A         Trang đầu của segment RX: mã lệnh, dữ liệu hằng và phần đầu .eh_frame.
+0x0000001000   0x21FC7C1B  0x87F1F000  0x1B V,R,X,U           Phần tiếp theo của .eh_frame trong cùng segment RX.
+0x0000002000   0x21FC7817  0x87F1E000  0x17 V,R,W,U           Segment dữ liệu: .data và .bss; không được thực thi.
+0x0000003000   0x21FC7407  0x87F1D000  0x07 V,R,W             Trang bảo vệ ngăn tràn stack; có ánh xạ nhưng U=0 nên user mode không truy cập được.
+0x0000004000   0x21FC70D7  0x87F1C000  0xD7 V,R,W,U,A,D       Trang stack của tiến trình; đã được truy cập và ghi khi thiết lập tham số chương trình.
+0x0000005000   0x00000000  0x00000000  0x00 không có bit      Chưa ánh xạ; vùng heap chưa được cấp trang.
+0x0000006000   0x00000000  0x00000000  0x00 không có bit      Chưa ánh xạ; vùng heap chưa được cấp trang.
+0x0000007000   0x00000000  0x00000000  0x00 không có bit      Chưa ánh xạ; vùng heap chưa được cấp trang.
+0x0000008000   0x00000000  0x00000000  0x00 không có bit      Chưa ánh xạ; vùng heap chưa được cấp trang.
+0x0000009000   0x00000000  0x00000000  0x00 không có bit      Chưa ánh xạ; vùng heap chưa được cấp trang.
+0x3FFFFF6000   0x00000000  0x00000000  0x00 không có bit      Khoảng trống không ánh xạ trước các trang đặc biệt ở đỉnh không gian địa chỉ.
+0x3FFFFF7000   0x00000000  0x00000000  0x00 không có bit      Khoảng trống không ánh xạ trước các trang đặc biệt ở đỉnh không gian địa chỉ.
+0x3FFFFF8000   0x00000000  0x00000000  0x00 không có bit      Khoảng trống không ánh xạ trước các trang đặc biệt ở đỉnh không gian địa chỉ.
+0x3FFFFF9000   0x00000000  0x00000000  0x00 không có bit      Khoảng trống không ánh xạ trước các trang đặc biệt ở đỉnh không gian địa chỉ.
+0x3FFFFFA000   0x00000000  0x00000000  0x00 không có bit      Khoảng trống không ánh xạ trước các trang đặc biệt ở đỉnh không gian địa chỉ.
+0x3FFFFFB000   0x00000000  0x00000000  0x00 không có bit      Khoảng trống không ánh xạ trước các trang đặc biệt ở đỉnh không gian địa chỉ.
+0x3FFFFFC000   0x00000000  0x00000000  0x00 không có bit      Khoảng trống không ánh xạ trước các trang đặc biệt ở đỉnh không gian địa chỉ.
+0x3FFFFFD000   0x00000000  0x00000000  0x00 không có bit      Địa chỉ USYSCALL được dành sẵn, nhưng chưa có ánh xạ ở thời điểm này.
+0x3FFFFFE000   0x21FD08C7  0x87F42000  0xC7 V,R,W,A,D         Trapframe lưu thanh ghi khi vào/ra kernel; U=0, X=0 nên user mode không đọc, ghi hoặc thực thi trang này.
+0x3FFFFFF000   0x2000184B  0x80006000  0x4B V,R,X,A           Trampoline phục vụ chuyển giữa user mode và supervisor mode; U=0, W=0 nên user mode không truy cập trực tiếp và không thể ghi.
+
+Các trang RX có thể đọc và thực thi nhưng không ghi; trang dữ liệu và stack có thể đọc/ghi nhưng không thực thi. Các PTE bằng 0 không chứa ánh xạ hợp lệ, nên PA=0 không biểu thị một trang vật lý được cấp phát. Các VA liên tiếp ở đầu tiến trình không bắt buộc ánh xạ đến các PA liên tiếp, như chính các PA trong kết quả cho thấy.
