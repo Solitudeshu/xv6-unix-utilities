@@ -107,10 +107,46 @@ sys_vmprint(void)
 #endif
 
 #ifdef LAB_PGTBL
-int
+#define PGACCESS_MAX_PAGES 256
+
+uint64
 sys_pgaccess(void)
 {
-  // lab pgtbl: your code here.
+  uint64 base, user_mask;
+  int npages;
+  struct proc *p = myproc();
+  uint8 mask[(PGACCESS_MAX_PAGES + 7) / 8];
+
+  argaddr(0, &base);
+  argint(1, &npages);
+  argaddr(2, &user_mask);
+
+  if (npages < 0 || npages > PGACCESS_MAX_PAGES)
+    return -1;
+  if (npages == 0)
+    return 0;
+  if (base >= MAXVA || base > MAXVA - 1 - (uint64)(npages - 1) * PGSIZE)
+    return -1;
+
+  memset(mask, 0, sizeof(mask));
+  for (int i = 0; i < npages; i++) {
+    pte_t *pte = walk(p->pagetable, base + (uint64)i * PGSIZE, 0);
+    if (pte == 0 || (*pte & (PTE_V | PTE_U)) != (PTE_V | PTE_U) ||
+        !PTE_LEAF(*pte))
+      return -1;
+    if (*pte & PTE_A)
+      mask[i / 8] |= 1U << (i % 8);
+  }
+
+  if (copyout(p->pagetable, p->sz, user_mask, (char *)mask,
+              (npages + 7) / 8) < 0)
+    return -1;
+
+  for (int i = 0; i < npages; i++) {
+    pte_t *pte = walk(p->pagetable, base + (uint64)i * PGSIZE, 0);
+    *pte &= ~PTE_A;
+  }
+  sfence_vma();
   return 0;
 }
 #endif
