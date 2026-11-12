@@ -76,6 +76,13 @@ trung gian dẫn đến bảng con. Số cụm " .." thể hiện độ sâu c�
 PTE. Các địa chỉ chưa được ánh xạ có PTE bằng 0 xuất hiện trong
 print_pgtbl sẽ được bỏ qua khi vmprint duyệt cây.
 
+Khi làm xong Task 2, kết quả vmprint có 7 trang lá như đã
+phân tích ở trên. Sau khi thêm USYSCALL ở Task 4, kết quả
+có 8 trang lá. Trang mới nằm tại VA 0x3fffffd000, chứa PID
+của tiến trình và có quyền RU. Chương trình user được đọc
+PID từ trang này bằng ugetpid(), nhưng không được ghi hoặc
+thực thi lệnh trên trang.
+
 
 Câu 3. Các system call có thể tăng tốc bằng trang chia sẻ
 
