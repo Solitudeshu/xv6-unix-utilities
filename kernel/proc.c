@@ -131,6 +131,17 @@ found:
     return 0;
   }
 
+#ifdef LAB_PGTBL
+  // Allocate per-process data that user space can read without a trap.
+  if ((p->usyscall = (struct usyscall *)kalloc()) == 0) {
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+  memset(p->usyscall, 0, PGSIZE);
+  p->usyscall->pid = p->pid;
+#endif
+
 #ifdef LAB_LOCK
   p->pincpu = 0;
 #endif
@@ -164,6 +175,11 @@ freeproc(struct proc *p)
   if (p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;
+#ifdef LAB_PGTBL
+  if (p->usyscall)
+    kfree((void *)p->usyscall);
+  p->usyscall = 0;
+#endif
   p->sz = 0;
   p->pid = 0;
   p->name[0] = 0;
@@ -174,7 +190,7 @@ freeproc(struct proc *p)
 }
 
 // Create a user page table for a given process, with no user memory,
-// but with trampoline and trapframe pages.
+// but with the special mappings at the top of user address space.
 pagetable_t
 proc_pagetable(struct proc *p)
 {
@@ -204,6 +220,16 @@ proc_pagetable(struct proc *p)
     return 0;
   }
 
+#ifdef LAB_PGTBL
+  // User space may read the PID, but cannot write or execute this page.
+  if (mappages(pagetable, USYSCALL, PGSIZE, (uint64)p->usyscall,
+               PTE_R | PTE_U) < 0) {
+    uvmunmap(pagetable, TRAPFRAME, 1, 0);
+    uvmunmap(pagetable, TRAMPOLINE, 1, 0);
+    uvmfree(pagetable, 0);
+    return 0;
+  }
+#endif
 
   return pagetable;
 }
@@ -215,6 +241,10 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
 {
   uvmunmap(pagetable, TRAMPOLINE, 1, 0);
   uvmunmap(pagetable, TRAPFRAME, 1, 0);
+#ifdef LAB_PGTBL
+  // Keep the physical page across exec; freeproc owns its lifetime.
+  uvmunmap(pagetable, USYSCALL, 1, 0);
+#endif
   uvmfree(pagetable, sz);
 }
 
