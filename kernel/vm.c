@@ -163,7 +163,8 @@ vmprint_walk(pagetable_t pagetable, int level, uint64 va_base)
     for (int depth = 0; depth < 3 - level; depth++)
       printk(" ..");
 
-    printk("%p: pte %p pa %p", (void *)va, (void *)pte, (void *)pa);
+    printk("%p: pte %p pa %p", (void *)va, (void *)pte,
+           (void *)pa);
 
     if (pte & (PTE_R | PTE_W | PTE_X | PTE_U))
       printk(" ");
@@ -177,8 +178,12 @@ vmprint_walk(pagetable_t pagetable, int level, uint64 va_base)
     if (pte & PTE_U)
       printk("U");
 
+    if (level == 1 && PTE_LEAF(pte))
+      printk(" superpage");
+
     printk("\n");
-    if (level > 0 && (pte & (PTE_R | PTE_W | PTE_X)) == 0)
+
+    if (level > 0 && !PTE_LEAF(pte))
       vmprint_walk((pagetable_t)pa, level - 1, va);
   }
 }
@@ -195,10 +200,80 @@ vmprint(pagetable_t pagetable)
 // add a mapping to the kernel page table.
 // only used when booting.
 // does not flush TLB or enable paging.
-void
-kvmmap(pagetable_t kpgtbl, uint64 va, uint64 pa, uint64 sz, int perm)
+static pte_t *
+kwalk(pagetable_t pagetable, uint64 va, int target_level)
 {
-  if (mappages(kpgtbl, va, sz, pa, perm) != 0)
+  if (va >= MAXVA)
+    panic("kwalk: va out of range");
+
+  for (int level = 2; level > target_level; level--) {
+    pte_t *pte = &pagetable[PX(level, va)];
+
+    if (*pte & PTE_V) {
+      if (PTE_LEAF(*pte))
+        panic("kwalk: remap");
+
+      pagetable = (pagetable_t)PTE2PA(*pte);
+    } else {
+      pagetable_t child = (pagetable_t)kalloc();
+      if (child == 0)
+        return 0;
+
+      memset(child, 0, PGSIZE);
+      *pte = PA2PTE(child) | PTE_V;
+      pagetable = child;
+    }
+  }
+
+  return &pagetable[PX(target_level, va)];
+}
+
+static int
+kmappages(pagetable_t pagetable, uint64 va, uint64 size,
+          uint64 pa, int perm)
+{
+  if (va % PGSIZE != 0)
+    panic("kmappages: va not aligned");
+
+  if (pa % PGSIZE != 0)
+    panic("kmappages: pa not aligned");
+
+  if (size == 0 || size % PGSIZE != 0)
+    panic("kmappages: invalid size");
+
+  while (size > 0) {
+    uint64 page_size = PGSIZE;
+    int target_level = 0;
+
+    if (va % SUPERPGSIZE == 0 &&
+        pa % SUPERPGSIZE == 0 &&
+        size >= SUPERPGSIZE) {
+      page_size = SUPERPGSIZE;
+      target_level = 1;
+    }
+
+    pte_t *pte = kwalk(pagetable, va, target_level);
+    if (pte == 0)
+      return -1;
+
+    if (*pte & PTE_V)
+      panic("kmappages: remap");
+
+    *pte = PA2PTE(pa) | perm | PTE_V;
+
+    va += page_size;
+    pa += page_size;
+    size -= page_size;
+  }
+
+  return 0;
+}
+
+void
+kvmmap(pagetable_t kpgtbl, uint64 va, uint64 pa,
+       uint64 sz, int perm)
+{
+  if (kmappages(kpgtbl, va, sz, pa, perm) != 0)
     panic("kvmmap");
 }
 

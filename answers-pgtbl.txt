@@ -82,3 +82,17 @@ Câu 3. Các system call có thể tăng tốc bằng trang chia sẻ
 uptime() có thể được tối ưu bằng cách bổ sung bộ đếm ticks vào dữ liệu chia sẻ chỉ đọc. Kernel cập nhật giá trị này khi xử lý ngắt đồng hồ; hàm phía user đọc trực tiếp thay vì thực hiện ecall, nhờ đó tránh chuyển sang kernel và trở về user mode. Vì USYSCALL hiện là trang riêng của từng tiến trình, thiết kế này cần cập nhật các bản sao tương ứng và bảo đảm phép đọc/ghi bộ đếm có tính nguyên tử. Việc tối ưu phải cân nhắc chi phí cập nhật các bản sao ở mỗi tick.
 
 sbrk(0) cũng phù hợp vì chỉ truy vấn điểm kết thúc vùng nhớ của tiến trình, không tăng hoặc giảm heap. Kernel có thể công bố giá trị p->sz trên trang USYSCALL và cập nhật khi tạo tiến trình, thực hiện exec hoặc thay đổi kích thước bộ nhớ, kể cả cấp phát lười. Hàm phía user đọc giá trị này để trả về kết quả mà không cần chuyển sang kernel. Các lời gọi sbrk với đối số khác 0 vẫn cần kernel quản lý bộ nhớ và bảng trang.
+
+Câu 4. Số superpage và bộ nhớ bảng trang tiết kiệm được
+
+Kết quả kiểm tra ghi nhận 95 PTE superpage trong bảng trang
+kernel. Mỗi PTE nằm ở cấp 1 và ánh xạ một vùng nhớ 2 MiB.
+
+Với trang 4 KiB, một vùng 2 MiB cần 512 PTE lá nằm trong
+một bảng cấp 0. Mỗi PTE có kích thước 8 byte, nên bảng này
+chiếm 4096 byte.
+
+Sử dụng 95 superpage giúp tiết kiệm 95 trang bảng cấp 0,
+tương đương 389.120 byte, hay 380 KiB bộ nhớ dành cho bảng
+trang. Việc tra cứu các vùng này cũng kết thúc ở cấp 1,
+giảm một cấp tra bảng.
