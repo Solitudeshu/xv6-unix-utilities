@@ -64,7 +64,7 @@ trí bộ nhớ của chương trình pgtbltest.
   trap. Trang có quyền đọc và thực thi, cấm ghi. Bit U bằng 0 nên
   user không được truy cập trực tiếp.
 
-Đối chiếu với Task 1, các dòng có cùng VA trong print_pgtbl và
+Đối chiếu với Câu 1, các dòng có cùng VA trong print_pgtbl và
 vmprint biểu diễn cùng ánh xạ, có cùng PA và quyền truy cập trong
 lần chạy này. Ví dụ, trang VA 0x2000 có PA 0x87f1e000 và các bit
 V, R, W, U. print_pgtbl in giá trị cờ 0x17, còn vmprint thể hiện
@@ -75,6 +75,7 @@ vmprint duyệt cây bảng trang, in tất cả PTE hợp lệ, bao gồm các 
 trung gian dẫn đến bảng con. Số cụm " .." thể hiện độ sâu của từng
 PTE. Các địa chỉ chưa được ánh xạ có PTE bằng 0 xuất hiện trong
 print_pgtbl sẽ được bỏ qua khi vmprint duyệt cây.
+
 
 Câu 3. Các system call có thể tăng tốc bằng trang chia sẻ
 
